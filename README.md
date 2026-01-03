@@ -103,6 +103,7 @@ Now you have access to the data through pandas, you should follow these steps.
 
 2. With the connection ready, use streamlit to build an interactive dashboard.
 
+    * The dashboard should cover the key pillars and KPIs outlined in the project proposal (PROJECT_PROPOSAL.md).
     * Use plotly for visualizations.
     * Implement filters and interactive elements to explore the data.
 
