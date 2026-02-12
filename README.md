@@ -2,6 +2,46 @@
 
 IE's MBDS program for advanced track
 
+## Getting Started: Fork & Clone
+
+Each group must work on their own copy of this repository. Follow these steps to set up your group's repo.
+
+### 1. Fork the Repository
+
+1. Go to the original repository on GitHub.
+2. Click the **Fork** button (top-right corner).
+3. Select one group member's GitHub account as the destination. This creates a copy of the repo under that account.
+
+### 2. Clone Your Fork
+
+Once forked, every group member should clone the fork to their local machine.
+
+**macOS (Terminal):**
+```bash
+git clone https://github.com/<your-github-username>/advanced-track.ie.git
+cd advanced-track.ie
+```
+
+**Windows (PowerShell or Git Bash):**
+```powershell
+git clone https://github.com/<your-github-username>/advanced-track.ie.git
+cd advanced-track.ie
+```
+
+> Replace `<your-github-username>` with the GitHub username of the group member who forked the repo.
+
+### 3. Add Group Members as Collaborators
+
+The group member who owns the fork should add the rest of the group:
+
+1. Go to your forked repo on GitHub.
+2. Navigate to **Settings > Collaborators**.
+3. Click **Add people** and invite each group member by their GitHub username or email.
+
+Once added, all members can push and pull from the same fork.
+
+---
+
 ## Database Connection Guide
 
 This guide explains how to set up your Python environment and connect to the IBM DB2 database used in this project.
@@ -34,23 +74,67 @@ The project relies on a specific set of Python libraries defined in `pyproject.t
 
 This project uses `uv` for dependency management.
 
-1. **Install uv**:
-    If you don't have `uv` installed, follow the instructions in the [official documentation](https://docs.astral.sh/uv/getting-started/installation/).
+### Step 1: Install uv
 
-    Quick install for macOS/Linux:
+If you don't have `uv` installed, follow the instructions in the [official documentation](https://docs.astral.sh/uv/getting-started/installation/).
+
+**macOS / Linux (Terminal):**
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-2. **Install Dependencies**:
-    Run the following command in your terminal to create the virtual environment and install all required packages:
-        ```bash
-        uv sync
-        ```
+**Windows (PowerShell):**
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
 
-3. **Activate Environment**:
+### Step 2: Install Dependencies
+
+Run the following command in your terminal to create the virtual environment and install all required packages:
+
+```bash
+uv sync
+```
+
+### Step 3: Activate the Virtual Environment
+
+**macOS / Linux (Terminal):**
 ```bash
 source .venv/bin/activate
+```
+
+**Windows (PowerShell):**
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+**Windows (Command Prompt):**
+```cmd
+.venv\Scripts\activate.bat
+```
+
+### Step 4: Create Your `.env` File
+
+Create a file called `.env` in the project root to store your database credentials securely. This file is already in `.gitignore` so it will not be pushed to GitHub.
+
+**macOS / Linux (Terminal):**
+```bash
+touch .env
+```
+
+**Windows (PowerShell):**
+```powershell
+New-Item .env
+```
+
+Then open `.env` in any text editor and add:
+
+```
+DB_USERNAME=your_username
+DB_PASSWORD=your_password
+DB_HOST=52.211.123.34
+DB_PORT=25010
+DB_NAME=IEMASTER
 ```
 
 ## 3. Connecting to the Database
@@ -109,9 +193,9 @@ Now you have access to the data through pandas, you should follow these steps.
 
 3. Deliver your project by:
 
-    * Forking this repository.
+    * Forking this repository (see [Getting Started](#getting-started-fork--clone) above).
     * Committing your code and pushing it to your fork.
-    * Sharing the link to your forked repository with all necessary instructions to run your project
+    * Sharing the link to your forked repository with all necessary instructions to run your project.
 
 ## 4. Troubleshooting
 
@@ -120,3 +204,12 @@ Now you have access to the data through pandas, you should follow these steps.
 
 * **Connection Timeouts**:
     Ensure you are connected to the internet and that the firewall allows traffic to port `25010`.
+
+* **`uv` not recognized (Windows)**:
+    Close and reopen your terminal after installing `uv` so the PATH updates take effect.
+
+* **PowerShell script execution disabled (Windows)**:
+    If you get an error activating the virtual environment, run this first:
+    ```powershell
+    Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+    ```
