@@ -1,434 +1,433 @@
 # SkyHigh Insights - Executive Airline Dashboard
 
-An interactive web application to analyze and visualize airline operations data from an IBM DB2 database, built with Python, Streamlit, and Plotly.
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Streamlit](https://img.shields.io/badge/streamlit-1.28+-green.svg)](https://streamlit.io/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## 📌 Project Overview
+An interactive web application to analyze and visualize airline operations data, built with **Python**, **Streamlit**, and **Plotly**. This project provides a comprehensive Executive Command Center dashboard for analyzing financial health, operational efficiency, and fleet status.
 
-SkyHigh Insights provides a comprehensive Executive Command Center dashboard for analyzing the airline's financial health, operational efficiency, and fleet status. This project is part of the IE MBDS Advanced Tech Track program.
+---
 
-### Key Features
+## 📋 Table of Contents
 
-- **Executive Summary**: Real-time KPIs and high-level metrics
-- **Financial Performance**: Revenue analysis by route and ticket class
-- **Fleet Operations**: Aircraft utilization, fuel efficiency, and maintenance alerts
-- **Route Network**: Geographic visualization of flight routes and passenger dynamics
-- **HR Analytics**: Department headcount, budget distribution, and staffing metrics
-- **Interactive Visualizations**: Built with Plotly for dynamic exploration
-- **Real-time Data**: Fetches live data from IBM DB2 database
+- [Features](#-features)
+- [Architecture](#-architecture)
+- [Prerequisites](#-prerequisites)
+- [Installation](#-installation)
+- [Configuration](#-configuration)
+- [Running the Dashboard](#-running-the-dashboard)
+- [Data Pipeline](#-data-pipeline)
+- [Project Structure](#-project-structure)
+- [GitHub Actions Workflow](#-github-actions-workflow)
+- [Troubleshooting](#-troubleshooting)
+- [Contributing](#-contributing)
+- [License](#-license)
 
-## 🎯 Key Pillars & KPIs
+---
 
-### 1. **Financial Performance (The Bottom Line)**
-- Total Revenue: Aggregated from ticket sales
-- Revenue per Available Seat Mile (RASM)
-- Route Profitability analysis
-- Ancillary Revenue breakdown
+## ✨ Features
 
-### 2. **Fleet Operations & Efficiency**
-- Fleet Utilization metrics
-- Maintenance Health with alert system
-- Fuel Efficiency Leaderboard by aircraft model
+### **Executive Summary**
+- Real-time KPIs and high-level metrics
+- Key performance indicators at a glance
 
-### 3. **Commercial & Route Network**
-- Load Factor: Percentage of seats filled
-- Route Heatmap: Geographic visualization of busiest routes
-- Passenger Demographics: Age and gender distribution
+### **Financial Performance**
+- Total revenue tracking
+- Revenue analysis by route and ticket class
+- Revenue per Available Seat Mile (RASM) calculations
+- Ancillary revenue breakdown
 
-### 4. **Human Resources**
-- Headcount & Budget by department
-- Staffing Efficiency ratios
+### **Fleet Operations**
+- Aircraft utilization metrics
+- Fuel efficiency leaderboard by aircraft model
+- Maintenance alerts and health status
+- Load factor analysis (% seats filled)
+
+### **Route Network**
+- Geographic visualization of flight routes
+- Busiest routes heatmap
+- Passenger flow analysis
+- Route performance metrics
+
+### **Human Resources**
+- Department headcount and budget distribution
+- Staffing efficiency ratios
 - Salary distribution analysis
 
-## 🏗️ Technical Architecture
+### **Technical Highlights**
+- ✅ Interactive Visualizations (Plotly)
+- ✅ Real-time Data Refresh
+- ✅ Responsive Web Interface
+- ✅ Fallback Mode (Local Parquet Files)
+- ✅ Comprehensive Logging
+- ✅ Professional Code Structure
+
+---
+
+## 🏗️ Architecture
 
 ```
-Data Pipeline:
-1. Extraction: SQLAlchemy to pull raw data from IBM DB2
-2. Transformation: Pandas for data manipulation and analysis
-3. Visualization: Streamlit + Plotly for interactive dashboard
-4. Security: python-dotenv for credential management
+┌─────────────────────────────────────────────────────────────┐
+│                    Streamlit Dashboard                       │
+│            (dashboard.py - Interactive UI Layer)             │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+        ┌────────────┴────────────┐
+        │                         │
+        ▼                         ▼
+┌──────────────────┐    ┌────────────────────┐
+│  DB2 Connector   │    │  Local Connector   │
+│(src/connector.py)│    │(Parquet Fallback)  │
+└────────┬─────────┘    └────────┬───────────┘
+         │                       │
+         ▼                       ▼
+    ┌────────────────┐   ┌──────────────────┐
+    │  IBM DB2 Live  │   │  datasets/ Folder│
+    │    Database    │   │ (Parquet Files)  │
+    └────────────────┘   └──────────────────┘
 ```
 
-## 🚀 Getting Started
+**Data Flow:**
+1. **Extraction**: SQLAlchemy queries from IBM DB2 or reads local Parquet files
+2. **Transformation**: Pandas for data manipulation and aggregation
+3. **Caching**: Streamlit's `@st.cache_data` for performance
+4. **Visualization**: Plotly for interactive charts
+5. **Logging**: Dashboard operations logged to `dashboard.log`
 
-### Prerequisites
+---
 
-- Python 3.8 or higher
-- IBM DB2 database access
-- Database credentials (username, password, host, port)
-- Git (for version control)
+## 📦 Prerequisites
 
-### Installation
+- **Python 3.10+**
+- **IBM DB2 Instance** (optional - dashboard works with local data fallback)
+- **pip** or **conda** (package manager)
+- **Virtual Environment** (recommended)
 
-#### 1. Fork the Repository
+### System Requirements
+- **OS**: macOS, Linux, or Windows
+- **RAM**: 2GB minimum (4GB recommended)
+- **Disk**: 500MB for dependencies + datasets
 
-1. Go to the original repository on GitHub
-2. Click the Fork button (top-right corner)
-3. Select your GitHub account as the destination
+---
 
-#### 2. Clone Your Fork
+## 🚀 Installation
 
-**Windows (PowerShell or Git Bash):**
+### 1. Clone the Repository
+
 ```bash
-git clone https://github.com/<your-github-username>/advanced-track.ie.git
+git clone https://github.com/Fcevalerio/advanced-track.ie.git
 cd advanced-track.ie
 ```
 
-**macOS/Linux (Terminal):**
+### 2. Create Virtual Environment
+
+**Using venv:**
 ```bash
-git clone https://github.com/<your-github-username>/advanced-track.ie.git
-cd advanced-track.ie
+python3 -m venv venv
+source venv/bin/activate  # macOS/Linux
+# or
+venv\Scripts\activate  # Windows
 ```
 
-#### 3. Set Up Environment
-
-**Windows:**
+**Using conda:**
 ```bash
-setup.bat
+conda create -n skyhigh python=3.10
+conda activate skyhigh
 ```
 
-**macOS/Linux:**
-```bash
-chmod +x setup.sh
-./setup.sh
-```
-
-OR manually:
+### 3. Install Dependencies
 
 ```bash
-# Create virtual environment
-python -m venv venv
-
-# Activate virtual environment
-# Windows:
-venv\Scripts\activate.bat
-# macOS/Linux:
-source venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
 ```
 
-#### 4. Configure Database Credentials
+**Dependencies include:**
+- `streamlit>=1.28`
+- `pandas>=2.0`
+- `plotly>=5.17`
+- `sqlalchemy>=2.0`
+- `python-dotenv>=1.0`
+- `ibm_db>=3.1` (optional, for live DB2 connection)
 
-1. Copy `.env.example` to `.env`:
-   ```bash
-   # Windows PowerShell:
-   Copy-Item .env.example .env
-   
-   # Windows Command Prompt:
-   copy .env.example .env
-   
-   # macOS/Linux:
-   cp .env.example .env
-   ```
+---
 
-2. Edit `.env` file with your IBM DB2 credentials:
-   ```
-   DB_USERNAME=your_username
-   DB_PASSWORD=your_password
-   DB_HOST=52.211.123.34
-   DB_PORT=25010
-   DB_NAME=IEMASTER
-   ```
+## ⚙️ Configuration
 
-## 📊 Usage
+### Environment Variables
 
-### Running Tests
+Create a `.env` file in the project root:
 
-```bash
-# Test the database connector
-python -m unittest test_db2_connector.py -v
+```env
+# Database Configuration
+DB_HOST=your-db2-host.example.com
+DB_PORT=50000
+DB_NAME=your_database
+DB_USERNAME=your_username
+DB_PASSWORD=your_password
+
+# Optional: Driver specification (defaults to db2+ibm_db)
+DB2_DRIVER=db2+ibm_db
+
+# Dashboard Mode (1 = local fallback, 0 = live DB2)
+USE_LOCAL=1
 ```
 
-### Running the Dashboard
+**Note:** A `.env.example` file is provided in the repository as a template.
+
+### Running with Local Data (No DB2 Required)
+
+By default, the dashboard runs in **local fallback mode** reading from `datasets/` folder:
 
 ```bash
+USE_LOCAL=1 streamlit run dashboard.py
+```
+
+### Running with Live DB2 Connection
+
+To use the live database (requires DB2 credentials and client):
+
+```bash
+USE_LOCAL=0 streamlit run dashboard.py
+```
+
+---
+
+## 📊 Running the Dashboard
+
+### Quick Start (Recommended - Local Mode)
+
+```bash
+# Activate virtual environment
+source venv/bin/activate
+
+# Run dashboard with local data
 streamlit run dashboard.py
 ```
 
-The dashboard will open in your browser at `http://localhost:8501`
+The dashboard will open automatically in your browser at:
+- **Local URL**: `http://localhost:8501`
+- **Network URL**: `http://<your-ip>:8501`
 
-### Using the Connector Class Directly
+### With Live Database
 
-```python
-from db2_connector import DB2Connector
-import pandas as pd
+```bash
+# Set to use live DB2
+export USE_LOCAL=0
 
-# Initialize connector
-connector = DB2Connector()
-
-# Test connection
-if connector.test_connection():
-    print("✓ Connected to IBM DB2!")
-
-# Fetch total revenue
-revenue = connector.get_total_revenue()
-print(revenue)
-
-# Get load factor analysis
-load_factors = connector.get_load_factor()
-print(load_factors.head())
-
-# Analyze fleet utilization
-fleet = connector.get_fleet_utilization()
-print(fleet.head())
-
-# Get passenger demographics
-passengers = connector.get_passenger_demographics()
-print(passengers)
-
-# Get financial trends
-trends = connector.get_financial_trends()
-print(trends.head())
+# Run dashboard
+streamlit run dashboard.py
 ```
+
+### Running in Background (Server Deployment)
+
+```bash
+# Start as background process
+nohup streamlit run dashboard.py > streamlit.log 2>&1 &
+
+# View logs
+tail -f streamlit.log
+
+# Stop the process
+pkill -f streamlit
+```
+
+---
+
+## 📈 Data Pipeline
+
+### Data Sources
+
+1. **IBM DB2 Database** (Primary)
+   - 9 main tables: AIRPLANES, AIRPORTS, COUNTRIES, DEPARTMENT, EMPLOYEE, FLIGHTS, PASSENGERS, ROUTES, TICKETS
+   - Real-time data for live analytics
+   - Schema: `IEPLANE`
+
+2. **Local Parquet Files** (Fallback)
+   - Located in `datasets/` folder
+   - Pre-exported from DB2 using `ATT EDA.ipynb`
+   - Enables offline dashboard operation
+
+### Export Process
+
+To export data from DB2 to Parquet:
+
+```bash
+# 1. Open the notebook
+jupyter notebook ATT\ EDA.ipynb
+
+# 2. Run all cells to export tables to datasets/ folder
+# Note: Exports first 10,000 rows per table by default
+# Modify LIMIT_PER_TABLE variable to change this
+```
+
+---
 
 ## 📁 Project Structure
 
 ```
 advanced-track.ie/
-├── db2_connector.py              # IBM DB2 connector class
-├── dashboard.py                  # Streamlit dashboard application
-├── test_db2_connector.py         # Unit tests for connector
-├── requirements.txt              # Python dependencies
-├── .env.example                  # Environment variables template
-├── .env                          # Environment variables (create this)
-├── .gitignore                    # Git ignore rules
-├── setup.bat                     # Setup script for Windows
-├── setup.sh                      # Setup script for macOS/Linux
-├── project.json                  # Project configuration
-├── PROJECT_PROPOSAL.md           # Project proposal document
-└── README.md                     # This file
+├── dashboard.py                 # Main Streamlit application
+├── src/
+│   └── connector.py            # DB2Connector and DB2Config classes
+├── datasets/                   # Local parquet data (fallback mode)
+│   ├── airplanes/
+│   ├── airports/
+│   ├── countries/
+│   ├── department/
+│   ├── employee/
+│   ├── flights/
+│   ├── passengers/
+│   ├── routes/
+│   └── tickets/
+├── notebooks/                  # Jupyter notebooks for analysis
+│   └── ATT EDA.ipynb          # Data extraction and EDA
+├── tests/                      # Unit tests
+├── .env.example               # Environment template
+├── requirements.txt           # Python dependencies
+├── README.md                  # This file
+├── LICENSE                    # MIT License
+├── pyproject.toml             # Project metadata
+└── .github/
+    └── workflows/
+        └── ci.yml             # GitHub Actions CI/CD
 ```
-
-## 🧪 Testing
-
-The project includes comprehensive unit tests for the database connector:
-
-```bash
-# Run all tests
-python -m unittest discover
-
-# Run specific test file
-python -m unittest test_db2_connector.py -v
-
-# Run with coverage
-pip install coverage
-coverage run -m unittest test_db2_connector.py
-coverage report
-```
-
-### Test Coverage
-
-- ✅ Database connection testing
-- ✅ Revenue calculations
-- ✅ Load factor analysis
-- ✅ Fleet utilization metrics
-- ✅ Fuel efficiency analysis
-- ✅ Maintenance alerts
-- ✅ Passenger demographics
-- ✅ HR metrics retrieval
-- ✅ Custom query execution
-
-## 📊 Dashboard Pages
-
-### 1. Executive Summary
-- Total Revenue
-- Average Load Factor
-- Active Fleet Count
-- Total Passengers
-- Daily Revenue Trends
-
-### 2. Financial Performance
-- Revenue by Route
-- Route Profitability Analysis
-- Ticket Price Analysis by Route
-- Revenue Distribution
-
-### 3. Fleet Operations
-- Fleet Utilization Metrics
-- Fuel Efficiency Leaderboard
-- Load Factor Analysis
-- Maintenance Status Alerts
-
-### 4. Route Network
-- Route Heatmap (Geographic Distribution)
-- Load Factor by Route
-- Passenger Demographics (Gender, Age)
-
-### 5. HR Analytics
-- Headcount by Department
-- Salary Budget Distribution
-- Department Details
-- Average Salary Analysis
-
-## 🔐 Security Best Practices
-
-- **No Data Storage**: All data is fetched from DB2 and not stored locally
-- **Token Security**: Database credentials stored in `.env` file (never commit this)
-- **Environment Variables**: Sensitive data managed through python-dotenv
-- **Connection String**: Secure SQLAlchemy connection with ibm_db_sa
-
-### Important: Never commit `.env`
-
-The `.env` file is included in `.gitignore` to prevent accidentally uploading credentials. Always keep credentials secure and never share `.env` files.
-
-## 🔗 Database Connection
-
-### Connection String Format
-
-```
-db2+ibm_db://<username>:<password>@<host>:<port>/<database>
-```
-
-### Required Libraries
-
-- **sqlalchemy**: SQL Toolkit and ORM
-- **ibm-db-sa**: SQLAlchemy adapter for IBM DB2
-- **pandas**: Data manipulation
-- **numpy**: Scientific computing
-- **streamlit**: Web app framework
-- **plotly**: Interactive visualizations
-- **python-dotenv**: Environment variable management
-
-## 🛫 Deployment
-
-### Deploy to Streamlit Cloud
-
-1. Push your code to GitHub
-2. Go to [Streamlit Cloud](https://share.streamlit.io/)
-3. Click "New app"
-4. Select your repository and `dashboard.py`
-5. Add secrets in advanced settings:
-   ```
-   DB_USERNAME = your_username
-   DB_PASSWORD = your_password
-   DB_HOST = 52.211.123.34
-   DB_PORT = 25010
-   DB_NAME = IEMASTER
-   ```
-6. Click "Deploy"
-
-### Deploy to Heroku
-
-1. Create `Procfile`:
-   ```
-   web: streamlit run --server.port $PORT --server.address 0.0.0.0 dashboard.py
-   ```
-
-2. Deploy:
-   ```bash
-   heroku create your-app-name
-   heroku config:set DB_USERNAME=your_username
-   heroku config:set DB_PASSWORD=your_password
-   heroku config:set DB_HOST=52.211.123.34
-   heroku config:set DB_PORT=25010
-   heroku config:set DB_NAME=IEMASTER
-   git push heroku main
-   ```
-
-## 📚 API Reference
-
-### DB2Connector Methods
-
-| Method | Description | Returns |
-|--------|-------------|---------|
-| `test_connection()` | Test database connectivity | bool |
-| `get_total_revenue()` | Total revenue from all tickets | DataFrame |
-| `get_revenue_by_route()` | Revenue aggregated by route | DataFrame |
-| `get_load_factor()` | Load factor for each flight | DataFrame |
-| `get_fleet_utilization()` | Fleet metrics and utilization | DataFrame |
-| `get_fuel_efficiency()` | Fuel consumption by aircraft model | DataFrame |
-| `get_maintenance_alerts()` | Aircraft maintenance status | DataFrame |
-| `get_passenger_demographics()` | Passenger demographics data | DataFrame |
-| `get_hr_metrics()` | HR data by department | DataFrame |
-| `get_route_network()` | Route network with coordinates | DataFrame |
-| `get_financial_trends()` | Revenue trends over time | DataFrame |
-| `execute_query(query)` | Execute custom SQL query | DataFrame |
-
-All methods return Pandas DataFrames for easy data manipulation and analysis.
-
-## 🐛 Troubleshooting
-
-### Connection Issues
-
-| Issue | Solution |
-|-------|----------|
-| `Missing DB_USERNAME or DB_PASSWORD` | Check `.env` file has correct credentials |
-| `Connection timeout` | Verify internet connection and firewall allows port 25010 |
-| `Plugin not found: ibm_db` | Run `pip install ibm-db-sa` |
-
-### Data Issues
-
-| Issue | Solution |
-|-------|----------|
-| Empty DataFrames | Verify database tables exist and have data |
-| Slow queries | Check database server status and network |
-| Special characters in column names | Use proper SQL quoting/escaping |
-
-### Streamlit Issues
-
-| Issue | Solution |
-|-------|----------|
-| Port 8501 already in use | Use `streamlit run dashboard.py --server.port 8502` |
-| Module not found | Activate virtual environment and run `pip install -r requirements.txt` |
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Create a feature branch: `git checkout -b feature/amazing-feature`
-2. Commit your changes: `git commit -m 'Add amazing feature'`
-3. Push to your fork: `git push origin feature/amazing-feature`
-4. Open a Pull Request
-
-## 📞 Support
-
-For issues, questions, or suggestions:
-1. Check the Troubleshooting section above
-2. Review [IBM DB2 Documentation](https://www.ibm.com/docs/en/db2)
-3. Check [Streamlit Documentation](https://docs.streamlit.io/)
-4. Open an issue on the GitHub repository
-
-## 🔗 Useful Resources
-
-- [IBM DB2 Documentation](https://www.ibm.com/docs/en/db2)
-- [SQLAlchemy Documentation](https://docs.sqlalchemy.org/)
-- [Streamlit Documentation](https://docs.streamlit.io/)
-- [Plotly Documentation](https://plotly.com/python/)
-- [Pandas Documentation](https://pandas.pydata.org/)
-- [Python dotenv Documentation](https://github.com/theskumar/python-dotenv)
-
-## 📊 Next Steps
-
-1. ✅ Set up environment and install dependencies
-2. ✅ Configure database credentials in `.env`
-3. ✅ Run tests to verify connection
-4. ✅ Launch dashboard with `streamlit run dashboard.py`
-5. 📊 Explore the dashboard and analyze data
-6. 🚀 Deploy to production environment
-
-## 👥 Team Collaboration
-
-- **Repository Owner**: Hosts the forked repository
-- **Collaborators**: Added to the fork via Settings > Collaborators
-- **Branching Strategy**: Use feature branches for development
-- **Pull Requests**: Review and merge before deploying to main
-
-## 📅 Version History
-
-- **v1.0.0** (February 2026): Initial release
-  - Database connector with 11 query methods
-  - Streamlit dashboard with 5 pages
-  - Comprehensive unit tests
-  - Full documentation
 
 ---
 
-**Last Updated**: February 2026  
-**Project Status**: Active Development  
-**Maintainer**: IE MBDS Advanced Track
+## 🔄 GitHub Actions Workflow
+
+This project includes automated CI/CD via GitHub Actions.
+
+**Workflow File:** `.github/workflows/ci.yml`
+
+**Automated Checks:**
+- ✅ Python linting and code quality
+- ✅ Unit tests execution
+- ✅ Code coverage analysis
+- ✅ Security scanning
+
+**Triggered On:**
+- Push to `main` and `feature/*` branches
+- Pull requests
+
+**To View Workflow Status:**
+1. Go to GitHub repository
+2. Click "Actions" tab
+3. View latest workflow runs
+
+---
+
+## 🧪 Testing
+
+Run the test suite:
+
+```bash
+# Install test dependencies
+pip install pytest pytest-cov
+
+# Run tests
+pytest tests/
+
+# Run with coverage
+pytest --cov=src tests/
+```
+
+---
+
+## 🔧 Troubleshooting
+
+### Issue: `DB2 clidriver not found`
+
+**Solution:** Run in local mode:
+```bash
+USE_LOCAL=1 streamlit run dashboard.py
+```
+
+Or install IBM DB2 client:
+```bash
+pip install ibm_db
+```
+
+### Issue: `ModuleNotFoundError: No module named 'connector'`
+
+**Solution:** Ensure you're in the project root and virtual environment is activated:
+```bash
+cd advanced-track.ie
+source venv/bin/activate
+```
+
+### Issue: Streamlit not loading data
+
+**Check logs:**
+```bash
+tail -f dashboard.log
+tail -f streamlit.log
+```
+
+**Verify datasets exist:**
+```bash
+ls -la datasets/
+```
+
+### Issue: Port 8501 already in use
+
+**Solution:** Run on different port:
+```bash
+streamlit run dashboard.py --server.port 8502
+```
+
+---
+
+## 📚 Documentation
+
+- [Streamlit Docs](https://docs.streamlit.io/)
+- [Plotly Documentation](https://plotly.com/python/)
+- [SQLAlchemy Guide](https://docs.sqlalchemy.org/)
+- [IBM DB2 Documentation](https://www.ibm.com/docs/db2/)
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/new-feature`
+3. Commit changes: `git commit -m 'Add new feature'`
+4. Push to branch: `git push origin feature/new-feature`
+5. Open a Pull Request
+
+**Code Standards:**
+- PEP 8 compliant
+- Type hints for functions
+- Docstrings for classes and methods
+- Unit tests for new features
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 📧 Support
+
+For issues and questions:
+- Open an issue on [GitHub Issues](https://github.com/Fcevalerio/advanced-track.ie/issues)
+- Check existing documentation
+- Review logs in `dashboard.log` and `streamlit.log`
+
+---
+
+## 🎯 Roadmap
+
+- [ ] Add user authentication
+- [ ] Implement data refresh scheduling
+- [ ] Add export functionality (PDF reports)
+- [ ] Mobile-responsive design
+- [ ] Real-time alerts and notifications
+
+---
+
+**Last Updated:** February 2026  
+**Status:** Active Development  
+**Project:** IE MBDS Advanced Tech Track

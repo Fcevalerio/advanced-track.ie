@@ -5,6 +5,10 @@ import plotly.express as px
 from pathlib import Path
 import os
 import logging
+import sys
+
+# Add src to path to import connector
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 # Prefer the DB2 connector when available; otherwise provide a lightweight
 # local-file fallback that reads all parquet parts from the `datasets/` folder.
@@ -14,9 +18,11 @@ import logging
 USE_LOCAL = os.getenv("USE_LOCAL", "1").lower() in ("1", "true", "yes")
 
 try:
-    from db2_connector import DB2Connector  # type: ignore
-except Exception:
+    from connector import DB2Connector
+except Exception as e:
     DB2Connector = None
+    import traceback
+    traceback.print_exc()
 
 # If forced-local is enabled, ignore DB2 connector even if import succeeded.
 if USE_LOCAL:
