@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*.local
+.env.save
 
 # Python
 __pycache__/
@@ -64,3 +65,29 @@ htmlcov/
 
 # Misc
 *.log
+
+# Unnecessary files
+setup.sh
+setup.bat
+database_schema.csv
+project.json
+*.log
+debug_columns.py
+check_database.py
+hello_world.py
+test_push.txt
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+streamlit.log
+dashboard.log
+
+# Temporary files
+*.tmp
+.DS_Store
