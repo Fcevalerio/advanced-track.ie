@@ -12,12 +12,27 @@ for base in site.getsitepackages():
 
 if not clidriver_bin:
     raise RuntimeError("clidriver\\bin not found under site-packages (ibm_db install may be incomplete)")
+import os
+import pandas as pd
+from dotenv import load_dotenv
+import site
+
+clidriver_bin = None
+for base in site.getsitepackages():
+    candidate = os.path.join(base, "clidriver", "bin")
+    if os.path.isdir(candidate):
+        clidriver_bin = candidate
+        break
+
+if not clidriver_bin:
+    raise RuntimeError("clidriver\\bin not found under site-packages (ibm_db install may be incomplete)")
 
 os.add_dll_directory(clidriver_bin)
 
 import ibm_db
 
 load_dotenv()
+
 
 class DB2Connector:
     """A class to connect to IBM DB2 database and fetch airline data."""
@@ -56,7 +71,7 @@ class DB2Connector:
         """Execute query and return as DataFrame."""
         conn = self._get_connection()
         stmt = ibm_db.exec_immediate(conn, query)
-        
+
         # Get column names
         col_names = []
         i = 0
@@ -69,7 +84,7 @@ class DB2Connector:
                 i += 1
             except:
                 break
-        
+
         # Fetch data
         rows = []
         while True:
@@ -77,7 +92,7 @@ class DB2Connector:
             if not row:
                 break
             rows.append(row)
-        
+
         # Create DataFrame
         if rows:
             return pd.DataFrame(rows, columns=col_names)
@@ -87,10 +102,8 @@ class DB2Connector:
     def get_total_revenue(self) -> pd.DataFrame:
         """Fetch total revenue from tickets."""
         query = """
-        SELECT SUM(TOTAL_AMOUNT) as TOTAL_REVENUE 
-        FROM (
-            SELECT TOTAL_AMOUNT FROM IEPLANE.TICKETS FETCH FIRST 10000 ROWS ONLY
-        ) t
+        SELECT SUM(TOTAL_AMOUNT) as TOTAL_REVENUE
+        FROM IEPLANE.TICKETS t
         """
         return self._execute_query(query)
 
@@ -105,9 +118,7 @@ class DB2Connector:
             COUNT(t.TICKET_ID) as TICKET_COUNT,
             AVG(t.TOTAL_AMOUNT) as AVG_TICKET_PRICE
         FROM IEPLANE.ROUTES r
-        LEFT JOIN (
-            SELECT ROUTE_CODE, TOTAL_AMOUNT, TICKET_ID FROM IEPLANE.TICKETS FETCH FIRST 10000 ROWS ONLY
-        ) t ON r.ROUTE_CODE = t.ROUTE_CODE
+        LEFT JOIN IEPLANE.TICKETS t ON r.ROUTE_CODE = t.ROUTE_CODE
         GROUP BY r.ROUTE_CODE, r.ORIGIN, r.DESTINATION
         ORDER BY TOTAL_REVENUE DESC
         FETCH FIRST 100 ROWS ONLY
@@ -125,14 +136,10 @@ class DB2Connector:
             (a.SEATS_BUSINESS + a.SEATS_PREMIUM + a.SEATS_ECONOMY) as CAPACITY,
             COUNT(t.TICKET_ID) as PASSENGERS_BOOKED,
             ROUND(FLOAT(COUNT(t.TICKET_ID)) / (a.SEATS_BUSINESS + a.SEATS_PREMIUM + a.SEATS_ECONOMY) * 100, 2) as LOAD_FACTOR
-        FROM (
-            SELECT FLIGHT_ID, ROUTE_CODE, AIRPLANE FROM IEPLANE.FLIGHTS FETCH FIRST 10000 ROWS ONLY
-        ) f
+        FROM IEPLANE.FLIGHTS f
         JOIN IEPLANE.ROUTES r ON f.ROUTE_CODE = r.ROUTE_CODE
         JOIN IEPLANE.AIRPLANES a ON f.AIRPLANE = a.AIRCRAFT_REGISTRATION
-        LEFT JOIN (
-            SELECT TICKET_ID, FLIGHT_ID FROM IEPLANE.TICKETS FETCH FIRST 10000 ROWS ONLY
-        ) t ON f.FLIGHT_ID = t.FLIGHT_ID
+        LEFT JOIN IEPLANE.TICKETS t ON f.FLIGHT_ID = t.FLIGHT_ID
         GROUP BY f.FLIGHT_ID, r.ROUTE_CODE, r.ORIGIN, r.DESTINATION, a.SEATS_BUSINESS, a.SEATS_PREMIUM, a.SEATS_ECONOMY
         ORDER BY LOAD_FACTOR DESC
         FETCH FIRST 500 ROWS ONLY
@@ -153,9 +160,7 @@ class DB2Connector:
             a.MAINTENANCE_LAST_ACHECK,
             a.MAINTENANCE_TAKEOFFS
         FROM IEPLANE.AIRPLANES a
-        LEFT JOIN (
-            SELECT FLIGHT_ID, AIRPLANE FROM IEPLANE.FLIGHTS FETCH FIRST 10000 ROWS ONLY
-        ) f ON a.AIRCRAFT_REGISTRATION = f.AIRPLANE
+        LEFT JOIN IEPLANE.FLIGHTS f ON a.AIRCRAFT_REGISTRATION = f.AIRPLANE
         GROUP BY a.AIRCRAFT_REGISTRATION, a.MODEL, a.SEATS_BUSINESS, a.SEATS_PREMIUM, a.SEATS_ECONOMY,
                  a.TOTAL_FLIGHT_DISTANCE, a.MAINTENANCE_FLIGHT_HOURS, a.FUEL_GALLONS_HOUR,
                  a.MAINTENANCE_LAST_ACHECK, a.MAINTENANCE_TAKEOFFS
@@ -208,9 +213,7 @@ class DB2Connector:
             ROUND(AVG(YEAR(CURRENT_DATE) - YEAR(BIRTH_DATE)), 1) as AVG_AGE,
             MIN(YEAR(CURRENT_DATE) - YEAR(BIRTH_DATE)) as MIN_AGE,
             MAX(YEAR(CURRENT_DATE) - YEAR(BIRTH_DATE)) as MAX_AGE
-        FROM (
-            SELECT GENDER, BIRTH_DATE FROM IEPLANE.PASSENGERS FETCH FIRST 10000 ROWS ONLY
-        ) p
+        FROM IEPLANE.PASSENGERS p
         GROUP BY GENDER
         """
         return self._execute_query(query)
@@ -226,9 +229,7 @@ class DB2Connector:
             AVG(e.SALARY) as AVG_SALARY,
             d.BUDGET
         FROM IEPLANE.DEPARTMENT d
-        LEFT JOIN (
-            SELECT EMPNO, WORKDEPT, SALARY FROM IEPLANE.EMPLOYEE FETCH FIRST 10000 ROWS ONLY
-        ) e ON d.DEPTNO = e.WORKDEPT
+        LEFT JOIN IEPLANE.EMPLOYEE e ON d.DEPTNO = e.WORKDEPT
         GROUP BY d.DEPTNO, d.DEPTNAME, d.BUDGET
         ORDER BY TOTAL_SALARY DESC
         """
@@ -252,12 +253,8 @@ class DB2Connector:
         FROM IEPLANE.ROUTES r
         JOIN IEPLANE.AIRPORTS ao ON r.ORIGIN = ao.IATA_CODE
         JOIN IEPLANE.AIRPORTS ad ON r.DESTINATION = ad.IATA_CODE
-        LEFT JOIN (
-            SELECT FLIGHT_ID, ROUTE_CODE FROM IEPLANE.FLIGHTS FETCH FIRST 10000 ROWS ONLY
-        ) f ON r.ROUTE_CODE = f.ROUTE_CODE
-        LEFT JOIN (
-            SELECT TICKET_ID, FLIGHT_ID FROM IEPLANE.TICKETS FETCH FIRST 10000 ROWS ONLY
-        ) t ON f.FLIGHT_ID = t.FLIGHT_ID
+        LEFT JOIN IEPLANE.FLIGHTS f ON r.ROUTE_CODE = f.ROUTE_CODE
+        LEFT JOIN IEPLANE.TICKETS t ON f.FLIGHT_ID = t.FLIGHT_ID
         GROUP BY r.ROUTE_CODE, ao.IATA_CODE, ao.AIRPORT, ao.LATITUDE, ao.LONGITUDE,
                  ad.IATA_CODE, ad.AIRPORT, ad.LATITUDE, ad.LONGITUDE
         ORDER BY FLIGHT_COUNT DESC
@@ -273,12 +270,8 @@ class DB2Connector:
             COUNT(DISTINCT t.TICKET_ID) as TICKET_COUNT,
             SUM(t.TOTAL_AMOUNT) as DAILY_REVENUE,
             AVG(t.TOTAL_AMOUNT) as AVG_TICKET_PRICE
-        FROM (
-            SELECT FLIGHT_ID, DEPARTURE FROM IEPLANE.FLIGHTS FETCH FIRST 10000 ROWS ONLY
-        ) f
-        LEFT JOIN (
-            SELECT TICKET_ID, FLIGHT_ID, TOTAL_AMOUNT FROM IEPLANE.TICKETS FETCH FIRST 10000 ROWS ONLY
-        ) t ON f.FLIGHT_ID = t.FLIGHT_ID
+        FROM IEPLANE.FLIGHTS f
+        LEFT JOIN IEPLANE.TICKETS t ON f.FLIGHT_ID = t.FLIGHT_ID
         GROUP BY DATE(f.DEPARTURE)
         ORDER BY FLIGHT_DATE DESC
         FETCH FIRST 100 ROWS ONLY
@@ -288,6 +281,7 @@ class DB2Connector:
     def execute_query(self, query: str) -> pd.DataFrame:
         """Execute custom query."""
         return self._execute_query(query)
+
 
 if __name__ == "__main__":
     connector = DB2Connector()

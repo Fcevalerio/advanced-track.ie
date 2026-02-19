@@ -1,6 +1,6 @@
 # tests/test_db2_connector.py
 """
-Integration tests for the connector in db2_connector.py.
+Integration tests for the DB2Connector in db2_connector.py.
 
 Run:
     pytest -q tests/test_db2_connector.py
@@ -20,9 +20,10 @@ import pandas as pd
 import pytest
 
 # import your connector (adjust import path if needed)
-# if your connector file is db2_connector.py at project root: from db2_connector import connector
-# if connector is in src/connector.py: from src.connector import connector
-from src import connector  # <-- adjust if your module path differs
+# if your connector file is db2_connector.py at project root: from db2_connector import DB2Connector
+# if connector is in src/connector.py: from src.connector import DB2Connector
+# 
+from src.connector import DB2Connector # <-- adjust if your module path differs
 
 
 # Test configuration
@@ -42,12 +43,12 @@ EXPECTED_TABLES = [
 
 # ---------- Fixtures ----------
 @pytest.fixture(scope="session")
-def connector() -> connector:
+def connector() -> DB2Connector:
     """Create connector and skip tests if not possible to connect."""
     try:
-        db = connector()  # will load .env via DB2Config.from_env
+        db = DB2Connector()  # will load .env via DB2Config.from_env
     except Exception as e:
-        pytest.skip(f"Cannot construct connector (env missing/invalid): {e}")
+        pytest.skip(f"Cannot construct DB2Connector (env missing/invalid): {e}")
 
     try:
         db.test_connection()
@@ -58,11 +59,11 @@ def connector() -> connector:
 
 
 # ---------- Basic tests ----------
-def test_test_connection(connector: connector):
+def test_test_connection(connector: DB2Connector):
     assert connector.test_connection() is True
 
 
-def test_read_sql_simple(connector: connector):
+def test_read_sql_simple(connector: DB2Connector):
     df = connector.read_sql("SELECT 1 AS X FROM SYSIBM.SYSDUMMY1")
     assert isinstance(df, pd.DataFrame)
     assert not df.empty
@@ -70,7 +71,7 @@ def test_read_sql_simple(connector: connector):
     assert int(df.iloc[0]["X"]) == 1
 
 
-def test_list_schemas(connector: connector):
+def test_list_schemas(connector: DB2Connector):
     df = connector.list_schemas()
     assert isinstance(df, pd.DataFrame)
     # Column name may be 'SCHEMA' according to implementation
@@ -79,7 +80,7 @@ def test_list_schemas(connector: connector):
 
 
 # ---------- Discovery / metadata tests ----------
-def test_list_tables_for_schema(connector: connector):
+def test_list_tables_for_schema(connector: DB2Connector):
     try:
         df = connector.list_tables(schema=DEFAULT_SCHEMA)
     except Exception as e:
@@ -90,7 +91,7 @@ def test_list_tables_for_schema(connector: connector):
 
 
 @pytest.mark.parametrize("table", EXPECTED_TABLES)
-def test_table_exists_and_get_columns(connector: connector, table: str):
+def test_table_exists_and_get_columns(connector: DB2Connector, table: str):
     try:
         exists = connector.table_exists(schema=DEFAULT_SCHEMA, table=table)
     except Exception as e:
@@ -110,7 +111,7 @@ def test_table_exists_and_get_columns(connector: connector, table: str):
 
 # ---------- Data read tests ----------
 @pytest.mark.parametrize("table", EXPECTED_TABLES)
-def test_read_table_limit(connector: connector, table: str):
+def test_read_table_limit(connector: DB2Connector, table: str):
     try:
         if not connector.table_exists(schema=DEFAULT_SCHEMA, table=table):
             pytest.skip(f"{DEFAULT_SCHEMA}.{table} not present; skipping read_table test.")
@@ -129,7 +130,7 @@ def test_read_table_limit(connector: connector, table: str):
 
 # ---------- Parquet export tests ----------
 @pytest.mark.parametrize("table", EXPECTED_TABLES)
-def test_save_table_as_parquet(connector: connector, tmp_path: Path, table: str):
+def test_save_table_as_parquet(connector: DB2Connector, tmp_path: Path, table: str):
     try:
         if not connector.table_exists(schema=DEFAULT_SCHEMA, table=table):
             pytest.skip(f"{DEFAULT_SCHEMA}.{table} not present; skipping parquet export.")
@@ -152,7 +153,7 @@ def test_save_table_as_parquet(connector: connector, tmp_path: Path, table: str)
         assert out_file.exists() or any(tmp_path.glob(f"{table.lower()}*.parquet"))
 
 
-def test_execute_select(connector: connector):
+def test_execute_select(connector: DB2Connector):
     # ensure execute runs without raising
     try:
         _ = connector.execute("SELECT 1 FROM SYSIBM.SYSDUMMY1")
