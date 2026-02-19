@@ -1,7 +1,247 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from db2_connector import DB2Connector
+from pathlib import Path
+import os
+import logging
+
+# Prefer the DB2 connector when available; otherwise provide a lightweight
+# local-file fallback that reads all parquet parts from the `datasets/` folder.
+# By default we force local fallback to make the dashboard runnable without the
+# IBM DB2 client. Set USE_LOCAL=0 or USE_LOCAL=false in the environment to
+# attempt to use DB2 when available.
+USE_LOCAL = os.getenv("USE_LOCAL", "1").lower() in ("1", "true", "yes")
+
+try:
+    from db2_connector import DB2Connector  # type: ignore
+except Exception:
+    DB2Connector = None
+
+# If forced-local is enabled, ignore DB2 connector even if import succeeded.
+if USE_LOCAL:
+    DB2Connector = None
+
+# configure a simple logger for the dashboard
+logger = logging.getLogger("dashboard")
+if not logger.handlers:
+    handler = logging.FileHandler("dashboard.log")
+    fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+    handler.setFormatter(fmt)
+    logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+
+
+class LocalConnector:
+    """Simple fallback connector that reads from datasets/* parquet files.
+
+    It implements the subset of methods the dashboard expects and reads
+    all parquet files found under `datasets/<table>/` (so it does not stop
+    at the first 10k rows).
+    """
+
+    def __init__(self, data_dir: str | Path = "datasets"):
+        self.data_dir = Path(data_dir)
+
+    def _read_table(self, table: str) -> pd.DataFrame:
+        """Read all parquet files for a table folder (case-insensitive)."""
+        table_dir = self.data_dir / table.lower()
+        files = []
+        if table_dir.exists() and table_dir.is_dir():
+            files = sorted(table_dir.glob("*.parquet"))
+        else:
+            # also try files named like table.parquet under datasets
+            candidate = self.data_dir / f"{table.lower()}.parquet"
+            if candidate.exists():
+                files = [candidate]
+
+        if not files:
+            return pd.DataFrame()
+
+        dfs = []
+        for f in files:
+            try:
+                dfs.append(pd.read_parquet(f))
+            except Exception:
+                # skip unreadable files
+                continue
+        if not dfs:
+            logger.debug("No readable parquet files for table %s", table)
+            return pd.DataFrame()
+        df = pd.concat(dfs, ignore_index=True)
+        # normalize common column names for downstream consumers
+        df = self._normalize_columns(table, df)
+        logger.info("Loaded table %s: files=%d rows=%d cols=%s", table, len(dfs), len(df), list(df.columns)[:10])
+        return df
+
+    def _normalize_columns(self, table: str, df: pd.DataFrame) -> pd.DataFrame:
+        """Normalize common column name variants to canonical names.
+
+        This maps common casing and alternate names to the field names the
+        dashboard expects (lower_snake_case and a few uppercase variants when
+        the app checks for them).
+        """
+        if df.empty:
+            return df
+
+        colmap = {}
+        lower_to_col = {c.lower(): c for c in df.columns}
+
+        # universal mappings
+        for src in ("total_amount", "total_revenue", "amount"):
+            if src in lower_to_col and "total_revenue" not in (c.lower() for c in df.columns):
+                colmap[lower_to_col[src]] = "total_revenue"
+
+        for src in ("route_code", "routecode", "route"):
+            if src in lower_to_col and "route_code" not in (c.lower() for c in df.columns):
+                colmap[lower_to_col[src]] = "route_code"
+
+        for src in ("passenger_count", "pax_count", "pax"):
+            if src in lower_to_col and "passenger_count" not in (c.lower() for c in df.columns):
+                colmap[lower_to_col[src]] = "passenger_count"
+
+        # flights and IDs
+        for src in ("flight_id", "flightid", "flight"):
+            if src in lower_to_col and "flight_id" not in (c.lower() for c in df.columns):
+                colmap[lower_to_col[src]] = "flight_id"
+
+        # airplane registration / capacity
+        for src in ("aircraft_registration", "registration", "airplane"):
+            if src in lower_to_col and "aircraft_registration" not in (c.lower() for c in df.columns):
+                colmap[lower_to_col[src]] = "aircraft_registration"
+
+        for src in ("capacity", "total_seats", "seats", "seat_capacity"):
+            if src in lower_to_col and "capacity" not in (c.lower() for c in df.columns):
+                colmap[lower_to_col[src]] = "capacity"
+
+        # dates
+        for src in ("flight_date", "date", "departure_date"):
+            if src in lower_to_col and "flight_date" not in (c.lower() for c in df.columns):
+                colmap[lower_to_col[src]] = "flight_date"
+
+        # passengers
+        for src in ("passenger_id", "id", "pid"):
+            if src in lower_to_col and "passenger_id" not in (c.lower() for c in df.columns):
+                colmap[lower_to_col[src]] = "passenger_id"
+
+        if colmap:
+            df = df.rename(columns=colmap)
+            logger.debug("Normalized columns for %s: %s", table, colmap)
+
+        return df
+
+    def get_total_revenue(self) -> pd.DataFrame:
+        tickets = self._read_table("TICKETS")
+        if tickets.empty:
+            return pd.DataFrame()
+        # try common column names
+        col = next((c for c in tickets.columns if c.lower() in ("total_amount", "total_revenue")), None)
+        if col is None:
+            return pd.DataFrame()
+        total = tickets[col].dropna().astype(float).sum()
+        return pd.DataFrame({"total_revenue": [total], "TOTAL_REVENUE": [total]})
+
+    def get_revenue_by_route(self) -> pd.DataFrame:
+        tickets = self._read_table("TICKETS")
+        if tickets.empty:
+            return pd.DataFrame()
+        route_col = next((c for c in tickets.columns if c.lower() == "route_code"), None)
+        amt_col = next((c for c in tickets.columns if c.lower() in ("total_amount", "total_revenue")), None)
+        if route_col is None or amt_col is None:
+            return pd.DataFrame()
+        df = tickets.groupby(route_col).agg({amt_col: "sum", route_col: "size"})
+        df = df.rename(columns={amt_col: "total_revenue", route_col: "ticket_count"}).reset_index()
+        # split route code to origin/dest if present (route_code like ABC-DEF)
+        if df.columns[0].lower() == "route_code":
+            df["origin"] = df[df.columns[0]].astype(str).str.split("-", n=1).str[0]
+            df["destination"] = df[df.columns[0]].astype(str).str.split("-", n=1).str[1].fillna("")
+        return df
+
+    def get_financial_trends(self) -> pd.DataFrame:
+        tickets = self._read_table("TICKETS")
+        if tickets.empty:
+            return pd.DataFrame()
+        # try to find a date and amount column
+        date_col = next((c for c in tickets.columns if "date" in c.lower()), None)
+        amt_col = next((c for c in tickets.columns if c.lower() in ("total_amount", "total_revenue")), None)
+        if date_col is None or amt_col is None:
+            return pd.DataFrame()
+        df = tickets.copy()
+        df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+        df = df.dropna(subset=[date_col])
+        df[amt_col] = pd.to_numeric(df[amt_col], errors="coerce")
+        daily = df.groupby(df[date_col].dt.date)[amt_col].sum().reset_index()
+        daily.columns = ["flight_date" if "flight" not in c.lower() else c for c in daily.columns]
+        daily = daily.rename(columns={daily.columns[0]: "flight_date", daily.columns[1]: "daily_revenue"})
+        return daily
+
+    # lightweight stubs for other methods used by the dashboard
+    def get_load_factor(self) -> pd.DataFrame:
+        # Attempt to compute load factor per flight: passengers/booked / capacity
+        tickets = self._read_table("TICKETS")
+        flights = self._read_table("FLIGHTS")
+        airplanes = self._read_table("AIRPLANES")
+        if tickets.empty or flights.empty or airplanes.empty:
+            return pd.DataFrame()
+        # group tickets per flight
+        tcount = tickets.groupby("flight_id").size().reset_index(name="passengers_booked")
+        f = flights.merge(tcount, left_on="flight_id", right_on="flight_id", how="left")
+        # attempt to get capacity from airplanes
+        if "airplane" in f.columns:
+            f = f.merge(airplanes, left_on="airplane", right_on="aircraft_registration", how="left")
+        cap_col = next((c for c in f.columns if c.lower() in ("capacity", "total_seats")), None)
+        if cap_col is None:
+            # try summing seat classes
+            seats = [c for c in f.columns if "seat" in c.lower() or c.lower().endswith("seats")]
+            if seats:
+                f["capacity"] = f[seats].sum(axis=1)
+                cap_col = "capacity"
+        if cap_col is None:
+            return pd.DataFrame()
+        f["passengers_booked"] = f["passengers_booked"].fillna(0)
+        f["load_factor"] = (f["passengers_booked"] / f[cap_col].replace({0: pd.NA})).apply(lambda x: x * 100 if pd.notna(x) else x)
+        return f[["flight_id", "load_factor"]].dropna()
+
+    def get_fleet_utilization(self) -> pd.DataFrame:
+        flights = self._read_table("FLIGHTS")
+        if flights.empty:
+            return pd.DataFrame()
+        if "airplane" in flights.columns:
+            util = flights.groupby("airplane").agg(total_flights=("flight_id", "count"))
+            util = util.reset_index().rename(columns={"airplane": "aircraft_registration"})
+            return util
+        return pd.DataFrame()
+
+    def get_passenger_demographics(self) -> pd.DataFrame:
+        pax = self._read_table("PASSENGERS")
+        if pax.empty:
+            return pd.DataFrame()
+        # Ensure a passenger_count column exists for dashboard metrics
+        if "passenger_count" not in (c.lower() for c in pax.columns):
+            # if there is one row per passenger, create a count
+            pax = pax.copy()
+            pax["passenger_count"] = 1
+        # normalize column name to lower-case passenger_count
+        cols = {c: c for c in pax.columns}
+        for c in pax.columns:
+            if c.lower() == "passenger_count":
+                cols[c] = "passenger_count"
+        pax = pax.rename(columns=cols)
+        return pax
+
+    def get_fuel_efficiency(self) -> pd.DataFrame:
+        return pd.DataFrame()
+
+    def get_maintenance_alerts(self) -> pd.DataFrame:
+        return pd.DataFrame()
+
+    def get_route_network(self) -> pd.DataFrame:
+        routes = self._read_table("ROUTES")
+        return routes
+
+    def get_hr_metrics(self) -> pd.DataFrame:
+        emp = self._read_table("EMPLOYEE")
+        return emp
 
 st.set_page_config(
     page_title="SkyHigh Insights - Airline Executive Dashboard",
@@ -15,9 +255,17 @@ st.markdown("### Executive Command Center for Airline Operations")
 st.markdown("---")
 
 if "connector" not in st.session_state:
-    st.session_state.connector = DB2Connector()
+    try:
+        if DB2Connector is None:
+            raise ImportError("DB2Connector not available")
 
-st.success("✓ Connected to IBM DB2 database - IEMASTER")
+        st.session_state.connector = DB2Connector()
+        st.success("✓ Connected to IBM DB2 database - IEMASTER")
+
+    except Exception as e:
+        st.session_state.connector = LocalConnector()
+        st.warning("⚠️ Using local parquet fallback (datasets/)")
+        st.caption(f"DB2 connection unavailable: {e}")
 
 st.sidebar.title("📍 Navigation")
 page = st.sidebar.radio(
@@ -636,3 +884,4 @@ elif page == "HR Analytics":
 
 st.markdown("---")
 st.caption("© 2026 SkyHigh Insights - Airline Executive Dashboard")
+
